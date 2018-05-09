@@ -7,8 +7,8 @@
 #define SOCKET_RECEIVE_BUFFER_SIZE 32
 
 // WiFi access point SSID and PASSWORD
-#define WIFI_SSID "TP-LINK_TRIFIDO_EXT"
-#define WIFI_PASS "caccamoscia"
+#define WIFI_SSID "**INSERT_HERE_ACCESS_POINT_SSID**"
+#define WIFI_PASS "**INSERT_HERE_ACCESS_POINT_PASSWORD**"
 
 // host, port of (sample) TCP server/listener
 #define TCP_SERVER_ADDRESS "ws.mqtt.it"
