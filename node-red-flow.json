@@ -1,0 +1,100 @@
+[
+    {
+        "id": "ed024eea.71465",
+        "type": "tcp in",
+        "z": "6d996aba.278c64",
+        "name": "",
+        "server": "server",
+        "host": "",
+        "port": "8888",
+        "datamode": "stream",
+        "datatype": "utf8",
+        "newline": "\\r",
+        "topic": "",
+        "base64": false,
+        "x": 170,
+        "y": 206,
+        "wires": [
+            [
+                "b1fd5726.5d2f68",
+                "e6c925ca.0aff58",
+                "368869fc.4e1486"
+            ]
+        ]
+    },
+    {
+        "id": "acb28b73.147078",
+        "type": "tcp out",
+        "z": "6d996aba.278c64",
+        "host": "",
+        "port": "",
+        "beserver": "reply",
+        "base64": false,
+        "end": false,
+        "name": "",
+        "x": 578,
+        "y": 208,
+        "wires": []
+    },
+    {
+        "id": "b1fd5726.5d2f68",
+        "type": "function",
+        "z": "6d996aba.278c64",
+        "name": "Reply",
+        "func": "if(msg.payload===\"test\") {\n    msg.payload=\"#OK^\\r\";\n} else {\n    msg.payload=msg.payload.toUpperCase();\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 371,
+        "y": 205,
+        "wires": [
+            [
+                "acb28b73.147078"
+            ]
+        ]
+    },
+    {
+        "id": "e6c925ca.0aff58",
+        "type": "debug",
+        "z": "6d996aba.278c64",
+        "name": "TCP IN (ESP8266)",
+        "active": true,
+        "console": "false",
+        "complete": "payload",
+        "x": 437,
+        "y": 319,
+        "wires": []
+    },
+    {
+        "id": "368869fc.4e1486",
+        "type": "trigger",
+        "z": "6d996aba.278c64",
+        "op1": "",
+        "op2": "Mancato invio",
+        "op1type": "nul",
+        "op2type": "str",
+        "duration": "15",
+        "extend": true,
+        "units": "s",
+        "reset": "",
+        "name": "",
+        "x": 389,
+        "y": 115,
+        "wires": [
+            [
+                "6a4d9044.bc293"
+            ]
+        ]
+    },
+    {
+        "id": "6a4d9044.bc293",
+        "type": "debug",
+        "z": "6d996aba.278c64",
+        "name": "Alert ESP8266",
+        "active": true,
+        "console": "false",
+        "complete": "payload",
+        "x": 607,
+        "y": 116,
+        "wires": []
+    }
+]
