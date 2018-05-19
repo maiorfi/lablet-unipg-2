@@ -11,7 +11,7 @@
 #define WIFI_PASS "**INSERT_HERE_ACCESS_POINT_PASSWORD**"
 
 // host, port of (sample) TCP server/listener
-#define TCP_SERVER_ADDRESS "ws.mqtt.it"
+#define TCP_SERVER_ADDRESS "192.168.1.160" /*"ws.mqtt.it"*/
 #define TCP_SERVER_PORT 8888
 
 static DigitalOut led1(LED1, false);
@@ -141,7 +141,13 @@ void btn_interrupt_handler()
 
 int main()
 {
+    // Let's start network connection task as soon as possible...
+    s_eq_manage_network.call(event_proc_manage_network_connection);
+
+    // ...then schedule a periodic check every 5 secs 
     s_eq_manage_network.call_every(5000, event_proc_manage_network_connection);
+    
+    // send "test" data every second
     s_eq_manage_network.call_every(1000, event_proc_send_and_receive_data, "test");
 
     btn.fall(&btn_interrupt_handler);
