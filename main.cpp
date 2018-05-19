@@ -63,6 +63,8 @@ void event_proc_send_and_receive_data(const char *message_type)
     if (s_connectionState != NETWORK_STATE_CONNECTED)
         return;
 
+    static int message_counter=0;
+
     TCPSocket socket;
     nsapi_error_t socket_operation_return_value;
 
@@ -83,7 +85,7 @@ void event_proc_send_and_receive_data(const char *message_type)
     }
 
     char sbuffer[SOCKET_SEND_BUFFER_SIZE];
-    sprintf(sbuffer, "%s\r", message_type);
+    sprintf(sbuffer, "%s #%d\r", message_type, ++message_counter);
     nsapi_size_t size = strlen(sbuffer);
 
     socket_operation_return_value = 0;
