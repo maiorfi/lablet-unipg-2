@@ -1,3 +1,3 @@
-### ESP8266 ATCommands based firmware flash/update
+### RTOS Sample
 
-[Explained here](https://os.mbed.com/users/sarahmarshy/notebook/esp8266-v2-firmware-update-/)
+Shows usage of Thread, EventQueue, InterruptIn, Timer.

@@ -1,158 +1,70 @@
 #include "mbed.h"
 
-#include "easy-connect.h"
+DigitalOut led(LED1);                           // porta digitale di uscita che pilota il led (polarità su scheda: alto->acceso)
+InterruptIn btnInt(BUTTON1);                    // oggetto per la gestione degli interrupt relativi alla porta digitale di ingresso collegata al pulsante blu (polarità su scheda: premuto->basso)
 
-// buffer sizes for socket-related operations (read/write)
-#define SOCKET_SEND_BUFFER_SIZE 32
-#define SOCKET_RECEIVE_BUFFER_SIZE 32
+Thread thread_blink;                            // per il task che fa lampeggiare il led
+Thread thread_recurrent;                        // per il task periodico
+Thread thread_button_queue_handler;             // per il task che esegue la callback creata nella coda dal gestore di interrupt del pulsante
 
-// WiFi access point SSID and PASSWORD
-#define WIFI_SSID "**INSERT_HERE_ACCESS_POINT_SSID**"
-#define WIFI_PASS "**INSERT_HERE_ACCESS_POINT_PASSWORD**"
+EventQueue eq_recurrent;                        // coda che mantiene le operazioni (chiamate a funzioni) del task periodico
+EventQueue eq_button_interrupt;                 // coda che mantiene le operazioni (chiamate a funzioni, o callback) generate dal gestore di interrupt del pulsante
 
-// host, port of (sample) TCP server/listener
-#define TCP_SERVER_ADDRESS "192.168.1.160" /*"ws.mqtt.it"*/
-#define TCP_SERVER_PORT 8888
+Timer timer;                                    // cronometro che misura il tempo trascorso dal boot
 
-static DigitalOut led1(LED1, false);
-
-static InterruptIn btn(BUTTON1);
-
-// reference to "NetworkInterface" object that will provide for network-related operation (connect, read/write, disconnect)
-static NetworkInterface *s_network;
-
-// Thread/EventQueue pair that will manage network operations (EventQueue ensures that "atomic" operations will not be interrupted until completion)
-static Thread s_thread_manage_network;
-static EventQueue s_eq_manage_network;
-
-// set of states for a simple finite-state-machine whose main purpose is to keep network connection "as much open as possible" (automatic reconnect)
-typedef enum _ConnectionState
+// task (avviato nel main) eseguito periodicamente
+// nota: il parametro "c" viene passato dal main(); questo è un modo per avviare più task che eseguono indipendentemente la stessa funzione ma con contesto diverso
+void event_function_recurrent(char c)
 {
-    NETWORK_STATE_DISCONNECTED,
-    NETWORK_STATE_CONNECTED
-} ConnectionState;
-
-// current state
-static ConnectionState s_connectionState = NETWORK_STATE_DISCONNECTED;
-
-// this callback (scheduled every 5 secs) implements network reconnect policy
-void event_proc_manage_network_connection()
-{
-    if (s_connectionState == NETWORK_STATE_CONNECTED)
-        return;
-
-    printf("> Initializing Network...\n");
-
-    // easy-connect library provides for a "all-in-one" easy-connect(log, ssid, pass) function
-    s_network = easy_connect(true, WIFI_SSID, WIFI_PASS);
-
-    if (!s_network)
-    {
-        printf("> ...connection FAILED\n");
-        return;
-    }
-
-    printf("> ...connection SUCCEEDED\n");
-
-    s_connectionState = NETWORK_STATE_CONNECTED;
+    // messaggio di debug; legge il valore del timer/cronometro
+    printf("[DEBUG - event_function_recurrent] Trascorsi %d ms (%c)\n", timer.read_ms(), c);
 }
 
-// this callback (scheduled every second) actually implement a request+reply transaction sample
-void event_proc_send_and_receive_data(const char *message_type)
+// task (avviato nel main) che in un ciclo infinito effettua il toggling della porta di uscita collegata al led e attende (senza bloccare gli altri task) mezzo secondo
+void thread_function_blink(DigitalOut* pled)
 {
-    if (s_connectionState != NETWORK_STATE_CONNECTED)
-        return;
-
-    static int message_counter=0;
-
-    TCPSocket socket;
-    nsapi_error_t socket_operation_return_value;
-
-    // step 1/2: request (open, connect, send...close and return on error)
-    printf("Sending TCP request to %s:%d...\n", TCP_SERVER_ADDRESS, TCP_SERVER_PORT);
-
-    socket.set_timeout(3000);
-    socket.open(s_network);
-
-    socket_operation_return_value = socket.connect(TCP_SERVER_ADDRESS, TCP_SERVER_PORT);
-
-    if (socket_operation_return_value != 0)
+    while (true)
     {
-        printf("...error in socket.connect(): %d\n", socket_operation_return_value);
-        socket.close();
-        s_connectionState = NETWORK_STATE_DISCONNECTED;
-        return;
+        pled->write(!pled->read());
+        wait_ms(500);
     }
-
-    char sbuffer[SOCKET_SEND_BUFFER_SIZE];
-    sprintf(sbuffer, "%s #%d\r", message_type, ++message_counter);
-    nsapi_size_t size = strlen(sbuffer);
-
-    socket_operation_return_value = 0;
-
-    while (size)
-    {
-        socket_operation_return_value = socket.send(sbuffer + socket_operation_return_value, size);
-
-        if (socket_operation_return_value < 0)
-        {
-            printf("...error sending data: %d\n", socket_operation_return_value);
-            socket.close();
-            return;
-        }
-        else
-        {
-            size -= socket_operation_return_value;
-            printf("...sent:%d bytes\n", socket_operation_return_value);
-        }
-    }
-
-    // step 2/2: receive reply (receive, close...close and return on error)
-    char rbuffer[SOCKET_RECEIVE_BUFFER_SIZE];
-
-    socket_operation_return_value = socket.recv(rbuffer, sizeof rbuffer);
-
-    if (socket_operation_return_value < 0)
-    {
-        printf("...error receiving data: %d\n", socket_operation_return_value);
-    }
-    else
-    {
-        // clear CR/LF chars for a cleaner debug terminal output
-        rbuffer[socket_operation_return_value] = '\0';
-        if (rbuffer[socket_operation_return_value - 1] == '\n' || rbuffer[socket_operation_return_value - 1] == '\r')
-            rbuffer[socket_operation_return_value - 1] = '\0';
-        if (rbuffer[socket_operation_return_value - 2] == '\n' || rbuffer[socket_operation_return_value - 2] == '\r')
-            rbuffer[socket_operation_return_value - 2] = '\0';
-
-        printf("...received: '%s'\n", rbuffer);
-    }
-
-    socket.close();
-
-    // id led is toggling everything is working as expected
-    led1.write(!led1.read());
 }
 
-// in case of an hardware interrupt, the isr routine schedules (on EventQueue dedicated to network operations)
-// a call to event_proc_send_and_receive_data(), but with an argument ("btn") different from one used in periodic request+reply ("test", see below)
+void event_interrupt_handler(bool state)
+{
+    printf("[DEBUG - btn_interrupt_handler] Interrupt pulsante: %s\n", state ? "L->H" : "H->L");
+}
+
 void btn_interrupt_handler()
 {
-    s_eq_manage_network.call(event_proc_send_and_receive_data, "btn");
+    // Le funzioni di standard I/O della libreria standard del C non sono "interrupt-safe" (né thread-safe, peraltro), quindi la chiamata a printf() che segue NON FUNZIONA!
+    // In particolare il firmware genera l'errore: "Mutex 0x20000c44 error -6: Not allowed in ISR context" (0x20000c44 è un indirizzo in RAM e può variare da caso a caso)
+    
+    // printf("[DEBUG - btn_interrupt_handler] Interrupt pulsante: %s\n", btnInt.read() ? "L->H" : "H->L");
+
+    // Questo invece lo posso fare, perché l'accodamento in una EventQueue è interrupt-safe (e pure thread-safe, peraltro)
+    eq_button_interrupt.call(&event_interrupt_handler, btnInt.read());
+
+    // Da provare anche (esecuzione differita di 500ms):
+    //eq_button_interrupt.call_in(500, &event_interrupt_handler, btnInt.read());
 }
 
+//////////
+// MAIN //
+//////////
 int main()
 {
-    // Let's start network connection task as soon as possible...
-    s_eq_manage_network.call(event_proc_manage_network_connection);
+    printf("[DEBUG - main] Lablet RTOS Demo #1 main()...\n");
 
-    // ...then schedule a periodic check every 5 secs 
-    s_eq_manage_network.call_every(5000, event_proc_manage_network_connection);
+    eq_recurrent.call_every(1000, &event_function_recurrent, '*');                                       // il task periodico viene "programmato" per essere eseguito una volta al secondo
     
-    // send "test" data every second
-    s_eq_manage_network.call_every(1000, event_proc_send_and_receive_data, "test");
+    thread_blink.start(callback(&thread_function_blink, &led));                                          // il task che effettua il toggling del led viene avviato qui, passando come parametro il puntatore alla porta di uscita da usare
 
-    btn.fall(&btn_interrupt_handler);
-
-    s_thread_manage_network.start(callback(&s_eq_manage_network, &EventQueue::dispatch_forever));
+    btnInt.rise(&btn_interrupt_handler);                                                                 // registrazione handler (funzione di gestione, detta anche isr) L->H
+    btnInt.fall(&btn_interrupt_handler);                                                                 // registrazione handler (funzione di gestione, detta anche isr) H->L (stessa dell'interrupt "rise")
+    
+    timer.start();                                                                                      // il cronometro viene avviato qui
+    
+    thread_recurrent.start(callback(&eq_recurrent, &EventQueue::dispatch_forever));                     // il task periodico viene avviato qui
+    thread_button_queue_handler.start(callback(&eq_button_interrupt, &EventQueue::dispatch_forever));   // il task che esegue lo scodamento ed esecuzione delle callback create dall'interrupt viene avviato qui
 }
