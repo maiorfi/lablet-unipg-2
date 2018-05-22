@@ -57,7 +57,7 @@ int main()
     printf("[DEBUG - main] Lablet RTOS Demo #1 main()...\n");
 
     eq_recurrent.call_every(1000, &event_function_recurrent, '*');                                       // il task periodico viene "programmato" per essere eseguito una volta al secondo
-    
+
     thread_blink.start(callback(&thread_function_blink, &led));                                          // il task che effettua il toggling del led viene avviato qui, passando come parametro il puntatore alla porta di uscita da usare
 
     btnInt.rise(&btn_interrupt_handler);                                                                 // registrazione handler (funzione di gestione, detta anche isr) L->H
