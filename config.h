@@ -25,15 +25,15 @@
 
 //#define RADIO_TX PE_1   /* for DISCO_F429ZI, Serial TX pin connected to the XBee module DIN pin */
 //#define RADIO_RX PE_0   /* for DISCO_F429ZI, Serial RX pin connected to the XBee module DOUT pin */
-#define RADIO_TX PC_4  /* for F303RE, Serial TX pin connected to the XBee module DIN pin */
-#define RADIO_RX PC_5 /* for F303RE, Serial RX pin connected to the XBee module DOUT pin */
+#define RADIO_TX PA_9  /* for F303RE, Serial TX pin connected to the XBee module DIN pin */
+#define RADIO_RX PA_10 /* for F303RE, Serial RX pin connected to the XBee module DOUT pin */
 //#define RADIO_RTS               NC /* TODO: specify your setup's Serial RTS# pin connected to the XBee module RTS# pin */
 //#define RADIO_CTS               NC /* TODO: specify your setup's Serial CTS# pin connected to the XBee module CTS# pin */
 /* TODO: specify your setup's GPIO (output)
  * connected to the XBee module's reset pin
  * or just write "NC"
  */
-#define RADIO_RESET PB_1 // for F303RE // NC
+#define RADIO_RESET NC // for F303RE // NC
 //#define RADIO_RESET D3 // for NUCLEO boards // NC
 //#define RADIO_SLEEP_REQ         NC /* TODO: specify your setup's GPIO (output) connected to the XBee module's SLEEP_RQ pin */
 //#define RADIO_ON_SLEEP          NC /* TODO: specify your setup's GPIO (input) connected to the XBee module's ON_SLEEP pin */

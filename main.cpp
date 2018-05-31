@@ -52,9 +52,9 @@ using namespace DigiLog; // when looking for types try Digilog namespace
  * The 1st part is the same for all XBee modules.
  * The 2nd part must be customized.
  */
-#define REMOTE_NODE_ADDR64_MSB ((uint32_t)0x0013A200)
+//#define REMOTE_NODE_ADDR64_MSB ((uint32_t)0x0013A200)
 
-#define REMOTE_NODE_ADDR64_LSB ((uint32_t)0x40DDE61F) // "1F" XBee PRO Coordinator
+//#define REMOTE_NODE_ADDR64_LSB ((uint32_t)0x40DDE61F) // "1F" XBee PRO Coordinator
 //#define REMOTE_NODE_ADDR64_LSB  ((uint32_t)0x40F5367B) // "7B" Coordinator or Router
 //#define REMOTE_NODE_ADDR64_LSB  ((uint32_t)0x41056EB2) // "B2" Router
 //#define REMOTE_NODE_ADDR64_LSB  ((uint32_t)0x41565EBB) // "BB" Router
@@ -66,7 +66,7 @@ using namespace DigiLog; // when looking for types try Digilog namespace
 /* defined in utils.h of XBeeLib_Fixed:
  * #define UINT64(msb,lsb)     (uint64_t)(((uint64_t)(msb) << 32) | (lsb))
  */
-#define REMOTE_NODE_ADDR64 UINT64(REMOTE_NODE_ADDR64_MSB, REMOTE_NODE_ADDR64_LSB)
+//#define REMOTE_NODE_ADDR64 UINT64(REMOTE_NODE_ADDR64_MSB, REMOTE_NODE_ADDR64_LSB)
 
 using namespace XBeeLib; // when looking for types try XBeeLib namespace
 
@@ -78,9 +78,9 @@ using namespace XBeeLib; // when looking for types try XBeeLib namespace
  */
 Serial *log_serial;
 
-char SENSOR_NODE_ID[] = "RBB"; // write here the three-digit sensor node ID
+char SENSOR_NODE_ID[] = "RBB"; // or "RCC", "RB2", "R7B"
 
-static void send_data_to_remote_node(XBeeZB &xbee, const RemoteXBeeZB &RemoteDevice, float RH, float temp)
+static void send_data_to_remote_node(XBeeZB &xbee, /*const RemoteXBeeZB &RemoteDevice,*/ float RH, float temp)
 {
     // const char data[] = "send_data_to_remote_node"; // original string
     // const uint16_t data_len = strlen(data); // original instruction
@@ -114,7 +114,7 @@ static void send_data_to_remote_node(XBeeZB &xbee, const RemoteXBeeZB &RemoteDev
      * implicit cluster_id=0x11, Digi International profile_id=C105
      * Here we use the first (implicit) form.
      */
-    const TxStatus txStatus = xbee.send_data(RemoteDevice, (const uint8_t *)data, data_len);
+    const TxStatus txStatus = xbee.send_data_to_coordinator((const uint8_t *)data, data_len);
     if (txStatus == TxStatusSuccess)
         log_serial->printf("send_data_to_remote_node OK, actual length = %d\r\n", data_len);
     else
@@ -181,7 +181,7 @@ int main()
     /* Here we define the remote ZigBee device
      * which the modem will connect to 
      */
-    const RemoteXBeeZB remoteDevice = RemoteXBeeZB(REMOTE_NODE_ADDR64);
+    //const RemoteXBeeZB remoteDevice = RemoteXBeeZB(REMOTE_NODE_ADDR64);
 
     while (true)
     {
@@ -200,9 +200,9 @@ int main()
             // print temperature on PC
             log_serial->printf("Ambient Temp. associated to RH reading is %6.2f degC\r\n\n", temp);
         }
-        send_data_to_remote_node(xbee, remoteDevice, RH, temp);
+        send_data_to_remote_node(xbee, /*remoteDevice,*/ RH, temp);
         log_serial->printf("\r\n");
-        wait(4.0);
+        wait(1.0);
     }
 
     delete (log_serial);
